@@ -14,7 +14,7 @@
 >> - TSM model [Site](https://tinyml.mit.edu/projects/tsm/)
 >>> - TSN and TSM source code from [SOURCE](https://github.com/mit-han-lab/temporal-shift-module).
 # Training method
-- training:
+- training:   
 <pre>
 <code>
 python trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {path of valid dataset} --model_type resnetLSTM
