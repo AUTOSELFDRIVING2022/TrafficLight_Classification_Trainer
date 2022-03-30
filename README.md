@@ -15,8 +15,12 @@
 >>> - TSN and TSM source code from (https://github.com/mit-han-lab/temporal-shift-module).
 # Training method
 - training:
+<pre>
+<code>
     python3 trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {path of valid dataset} --model_type resnetLSTM
 --epochs 50 --batch_size 32 --num_frames 10
+</code>
+</pre>
 
 # Evaluation method
 - You can evaluate this method with Detection model.
