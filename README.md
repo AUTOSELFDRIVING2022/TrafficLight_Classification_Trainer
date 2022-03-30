@@ -8,14 +8,14 @@
 
 # Training model
 - This code supports the:
--- Simple Conv with LSTM 
--- Resnet18 with LSTM
--- TSN model (https://arxiv.org/pdf/1705.02953.pdf) 
--- TSM model (https://tinyml.mit.edu/projects/tsm/)
---- TSN and TSM source code from (https://github.com/mit-han-lab/temporal-shift-module).
+>> - Simple Conv with LSTM 
+>> - Resnet18 with LSTM
+>> - TSN model (https://arxiv.org/pdf/1705.02953.pdf) 
+>> - TSM model (https://tinyml.mit.edu/projects/tsm/)
+>>> - TSN and TSM source code from (https://github.com/mit-han-lab/temporal-shift-module).
 # Training method
 - training:
-python3 trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {path of valid dataset} --model_type resnetLSTM
+> python3 trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {path of valid dataset} --model_type resnetLSTM
 --epochs 50 --batch_size 32 --num_frames 10
 
 # Evaluation method
