@@ -24,4 +24,4 @@ python trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {pa
 
 # Evaluation method
 - You can evaluate this method with Detection model.
-- Inference code is in Github: (https://github.com/KETIAUTO/TrafficLight_Detection_Inference.git)
+- Inference code is in [Github](https://github.com/AUTOSELFDRIVING2022/TrafficLight_Detection_Inference.git)
