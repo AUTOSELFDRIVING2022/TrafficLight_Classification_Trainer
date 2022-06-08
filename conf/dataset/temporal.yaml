@@ -1,0 +1,7 @@
+name: sequential
+train_path: '/dataset/Traffic_Light_Dataset_KETI4/train/'
+valid_path: '/dataset/Traffic_Light_Dataset_KETI4/test/'
+num_classes: 7
+in_channels: 3
+num_workers:  4
+num_frames: 8

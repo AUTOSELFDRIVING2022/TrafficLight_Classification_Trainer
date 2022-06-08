@@ -1,0 +1,20 @@
+defaults:
+- dataset: single #temporal
+- model: single_frame #temporal+frame
+- optimizer: adam  #adam
+#- hydra/sweeper: optuna #Optuna hyperparamater optimization program
+
+train_config:
+  model_type: single_frame #temporal_frame
+  seed:       101
+  debug:      False # set debug=False for Full Training
+  comment:    ${model.name}_ep_${train_config.epochs}_op_${optimizer.name}_lr_${optimizer.lr}_size_${train_config.img_size[0]}_loss_${losses.name}
+  train_bs:   64
+  valid_bs:   64
+  img_size:   [32, 64]
+  epochs:     20
+  device:     "cuda"
+
+
+losses:
+  name:         'CE'

@@ -1,0 +1,6 @@
+name:         'adamp'
+lr:            0.0002
+scheduler:    'CosineAnnealingLR'
+min_lr:        0.0000001
+warmup_epochs: 1
+wd:            0.0000001
