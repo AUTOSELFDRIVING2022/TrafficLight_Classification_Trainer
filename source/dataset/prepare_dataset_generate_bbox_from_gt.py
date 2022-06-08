@@ -7,15 +7,14 @@ import time
 import argparse
 
 parser = argparse.ArgumentParser(description='Argument parser of Generate bbox.')
-parser.add_argument('--thread_num', type=int, default=10, help='thread number')
-# parser.add_argument('--pathLabel', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/labels/', help='label of path')
-# parser.add_argument('--pathImg', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/images/', help='path of images')
-# parser.add_argument('--pathBbox', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/bbox/', help='save path of cropped bbox')
+parser.add_argument('--thread_num', type=int, default=50, help='thread number')
+parser.add_argument('--pathLabel', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/labels/', help='label of path')
+parser.add_argument('--pathImg', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/images/', help='path of images')
+parser.add_argument('--pathBbox', type=str, default= '/dataset/TrafficLight_AIHUB/Validation/bbox/', help='save path of cropped bbox')
 
-parser.add_argument('--pathImg', type=str, default= '/dataset/TrafficLight_AIHUB/Training/images_d_1/', help='path of images')
-parser.add_argument('--pathLabel', type=str, default= '/dataset/TrafficLight_AIHUB/Training/labels_d_1/', help='label of path')
-
-parser.add_argument('--pathBbox', type=str, default= '/dataset/TrafficLight_AIHUB/Training/bbox/', help='save path of cropped bbox')
+#parser.add_argument('--pathImg', type=str, default= '/dataset/TrafficLight_AIHUB/Training/images_d_16/', help='path of images')
+#parser.add_argument('--pathLabel', type=str, default= '/dataset/TrafficLight_AIHUB/Training/labels_d_16/', help='label of path')
+#parser.add_argument('--pathBbox', type=str, default= '/dataset/TrafficLight_AIHUB/Training/bbox/', help='save path of cropped bbox')
 args = parser.parse_args()
 
 ### Crop bbox from image
@@ -38,23 +37,23 @@ def image_crop_bbox(anno, imgName, _idx):
     for _att in anno['attribute']:
         if _att['red'] == 'on':
             if _att['left_arrow'] == 'on':
-                bboxPath = os.path.join(args.pathBbox,'red_left/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'red_left/' + str(_idx) + '_' + imgName[:-3] + 'png')
             else:
-                bboxPath = os.path.join(args.pathBbox,'red/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'red/' + str(_idx) + '_' + imgName[:-3] + 'png')
         elif _att['green'] == 'on':
             if _att['left_arrow'] == 'on':
-                bboxPath = os.path.join(args.pathBbox,'green_left/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'green_left/' + str(_idx) + '_' + imgName[:-3] + 'png')
             else:
-                bboxPath = os.path.join(args.pathBbox,'green/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'green/' + str(_idx) + '_' + imgName[:-3] + 'png')
         elif _att['yellow'] == 'on':
             if _att['left_arrow'] == 'on':
-                bboxPath = os.path.join(args.pathBbox,'yellow_left/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'yellow_left/' + str(_idx) + '_' + imgName[:-3] + 'png')
             else:
-                bboxPath = os.path.join(args.pathBbox,'yellow/' + str(_idx) + '_' + imgName)
+                bboxPath = os.path.join(args.pathBbox,'yellow/' + str(_idx) + '_' + imgName[:-3] + 'png')
         elif _att['left_arrow'] == 'on':
-            bboxPath = os.path.join(args.pathBbox,'left/' + str(_idx) + '_' + imgName)
+            bboxPath = os.path.join(args.pathBbox,'left/' + str(_idx) + '_' + imgName[:-3] + 'png')
         else: 
-            bboxPath = os.path.join(args.pathBbox,'off/' + str(_idx) + '_' + imgName)
+            bboxPath = os.path.join(args.pathBbox,'off/' + str(_idx) + '_' + imgName[:-3] + 'png')
     
     if box_H - box_Y > 10 and box_W - box_X > 10:
         cv2.imwrite(bboxPath,bboxImg)

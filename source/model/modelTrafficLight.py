@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from coordconv import CoordConv2d
+from source.model.coordconv import CoordConv2d
 
 #nclasses = 17 #KETIDB+TL SEOUL --> 5 classes // 1st release
 

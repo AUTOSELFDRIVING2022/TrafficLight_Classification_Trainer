@@ -7,7 +7,7 @@ import torch
 
 import torchvision
 import numpy as np
-from src.model.basic_ops import ConsensusModule
+from source.model.basic_ops import ConsensusModule
 from torch.nn.init import normal_, constant_
 
 class TSN(nn.Module):

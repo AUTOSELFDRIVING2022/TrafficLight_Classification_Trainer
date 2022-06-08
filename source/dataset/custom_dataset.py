@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import glob2
 import random
+import albumentations as A
 
 NUM_FRAMES = 10
 _class_names = {'Green': 0, 'Green_Left': 1, 'Red': 2, 'Red_Left': 3, 'Red_Yellow': 4, 'Yellow': 5, 'Yellow_Warning': 6}
@@ -55,7 +56,8 @@ class SequenceDataset(Dataset):
         video = torch.stack(trainImages)
              
         frames = video.permute(0,1,2,3)
-        return frames, label
+        #return frames, label, _
+        return {'image': frames, 'label': label, 'name': 'none'}  
         
     def __len__(self):
         return self.len
@@ -70,7 +72,7 @@ class SequenceDataset(Dataset):
 
         return video
 
-class CustomImageDataset(Dataset):
+class SingleImageDataset(Dataset):
     def read_data_set(self):
         all_img_files = []
         all_labels = []
@@ -122,3 +124,46 @@ class CustomImageDataset(Dataset):
 
     def __len__(self):
         return self.length
+    
+def get_dataset(cfg):
+    if cfg.train_config.model_type == 'single_frame':
+        train_data_set = SingleImageDataset(data_set_path = cfg.dataset.train_path)
+        train_loader = DataLoader(train_data_set, batch_size = cfg.train_config.train_bs, shuffle=True)
+
+        test_data_set = SingleImageDataset(data_set_path = cfg.dataset.valid_path)
+        test_loader = DataLoader(test_data_set, batch_size = cfg.train_config.valid_bs, shuffle=False)
+        return train_loader, test_loader
+    elif cfg.train_config.model_type == 'temporal_frame':
+        ### Define train and test loader
+        trainVideoFolder = sorted(glob2.glob(cfg.dataset.train_path + "*"))
+        validVideoFolder = sorted(glob2.glob(cfg.dataset.valid_path + "*"))
+
+        trainVideo = []
+        validVideo = []
+        for i in range(len(trainVideoFolder)):
+            trainVideo.append(trainVideoFolder[i])
+
+        for i in range(len(validVideoFolder)):
+            validVideo.append(validVideoFolder[i])
+
+        albumentations_train = A.Compose([
+            A.Resize(32 , 64), 
+            A.OneOf([
+                            A.MotionBlur(p=1),
+                            A.OpticalDistortion(p=1),
+                            A.GaussNoise(p=1)                 
+            ], p=1),
+            A.Blur(p=0.1),
+            A.CLAHE(p=0.1),
+            A.RandomBrightnessContrast(p=0.2),
+            #albumentations.RGBShift(r_shift_limit=15, g_shift_limit=15, b_shift_limit=15, p=0.2),
+            A.pytorch.transforms.ToTensorV2()])
+
+        albumentations_valid = A.Compose([
+            A.Resize(32 , 64), 
+            A.pytorch.transforms.ToTensorV2()])
+
+        trainDataset = SequenceDataset(trainVideo, max_len = cfg.dataset.num_frames, transform=albumentations_train)
+        validDataset = SequenceDataset(validVideo, max_len = cfg.dataset.num_frames, transform=albumentations_valid)
+        trainLoader = DataLoader(trainDataset, batch_size=cfg.train_config.train_bs, num_workers=cfg.dataset.num_workers, shuffle=True)
+        validLoader = DataLoader(validDataset, batch_size=cfg.train_config.valid_bs, num_workers=cfg.dataset.num_workers, shuffle=False)

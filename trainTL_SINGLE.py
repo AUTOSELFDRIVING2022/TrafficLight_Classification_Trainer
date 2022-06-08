@@ -213,18 +213,6 @@ if __name__ == "__main__":
     ### Set random seed 
     set_random_seed(args.seed)
 
-    ### Define train and test loader
-    trainVideoFolder = sorted(glob2.glob(args.train_path + "*"))
-    validVideoFolder = sorted(glob2.glob(args.valid_path + "*"))
-
-    trainVideo = []
-    validVideo = []
-    for i in range(len(trainVideoFolder)):
-        trainVideo.append(trainVideoFolder[i])
-
-    for i in range(len(validVideoFolder)):
-        validVideo.append(validVideoFolder[i])
-
     albumentations_train = albumentations.Compose([
         albumentations.Resize(32 , 64), 
         albumentations.OneOf([
@@ -242,24 +230,21 @@ if __name__ == "__main__":
         albumentations.Resize(32 , 64), 
         albumentations.pytorch.transforms.ToTensorV2()])
 
-    trainDataset = SequenceDataset(trainVideo, max_len = args.num_frames, transform=albumentations_train)
-    validDataset = SequenceDataset(validVideo, max_len = args.num_frames, transform=albumentations_valid)
-    trainLoader = DataLoader(trainDataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
-    validLoader = DataLoader(validDataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
-
+    #trainDataset = SequenceDataset(trainVideo, max_len = args.num_frames, transform=albumentations_train)
+    #validDataset = SequenceDataset(validVideo, max_len = args.num_frames, transform=albumentations_valid)
+    #trainLoader = DataLoader(trainDataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=True)
+    #validLoader = DataLoader(validDataset, batch_size=args.batch_size, num_workers=args.num_workers, shuffle=False)
+    
+    ### Define train and test loader
+    train_loader, test_loader = set_data_loader(args)
+    
     if args.model_type == 'conv_64x32':
-        model = TrafficLightNet_64x32_LSTM(nclasses=args.nclass).to(device)  
-    elif args.model_type == 'conv_128x128':
-        model = TrafficLightNet_128x128_LSTM(nclasses=args.nclass).to(device)  
-    elif args.model_type == 'resnetLSTM':
-        model = ResNetLSTM(BasicBlock, [2, 2, 2, 2], num_classes = args.nclass).to(device)
-    elif args.model_type == 'TSN':
-        model = TSN(num_class = args.nclass, num_segments = args.num_frames, modality = 'RGB', base_model='resnet18', is_shift = False).to(device)
-    elif args.model_type == 'TSM':
-        model = TSN(num_class = args.nclass, num_segments = args.num_frames, modality = 'RGB', base_model='resnet18', is_shift = True).to(device)
-        ### Temporal data must set to 8 in TSN model.
-        ### For various number of temporal data setting need to check Fold div in TSM
-        args.num_frames = 8
+        model = TrafficLightNet_64x32_noSTN(args.nclass).to(device) 
+    elif args.model_type == 'conv_64x32_coordConv':
+        model = TrafficLightNet_64x32_coordConv(args.nclass).to(device) 
+    else: 
+        print("No model selected")
+        
 
     ### Optimizer and Loss
     criterion = nn.CrossEntropyLoss()
