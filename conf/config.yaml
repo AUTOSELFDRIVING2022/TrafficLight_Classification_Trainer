@@ -7,12 +7,12 @@ defaults:
 train_config:
   model_type: single_frame #temporal_frame
   seed:       101
-  debug:      False # set debug=False for Full Training
+  debug:      True # set debug=False for Full Training
   comment:    ${model.name}_ep_${train_config.epochs}_op_${optimizer.name}_lr_${optimizer.lr}_size_${train_config.img_size[0]}_loss_${losses.name}
-  train_bs:   64
-  valid_bs:   64
+  train_bs:   256
+  valid_bs:   256
   img_size:   [32, 64]
-  epochs:     20
+  epochs:     100
   device:     "cuda"
 
 

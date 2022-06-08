@@ -37,6 +37,7 @@ from source.losses import dice_coef, get_criterion, iou_coef
 from source.optimizer import get_optimizer, get_scheduler
 from source.dataset.custom_dataset import get_dataset
 from source.utils.utils import AverageMeter, accuracy
+from source.utils.plotcm import plot_confusion_matrix
 
 # For colored terminal text
 from colorama import Fore, Back, Style
@@ -59,86 +60,98 @@ except:
             
 def train_one_epoch(cfg, model, optimizer, scheduler, criterion, dataloader, device, epoch):
     model.train()
+    
     scaler = amp.GradScaler()
-    n_accumulate = max(1, 32//cfg.train_config.train_bs)
+    max_norm = 5.0
     
     train_top1 = AverageMeter()
     train_top5 = AverageMeter()
-    
-    dataset_size = 0
-    running_loss = 0.0
-        
+    f1_scores = AverageMeter()
+    train_loss = AverageMeter()
+            
     pbar = tqdm(enumerate(dataloader), total=len(dataloader), desc='Train:')
+    
     for step, (data) in pbar:         
         images = data['image'].to(device, dtype=torch.float)
         labels  = data['label'].to(device)
         
         batch_size = images.size(0)
         
+        ###Use Unscaled Gradiendts instead of 
+        ### https://pytorch.org/docs/stable/notes/amp_examples.html#amp-examples
         with amp.autocast(enabled=True):
             outputs = model(images)
-            loss   = criterion(outputs, labels)
-            loss   = loss / n_accumulate
-            
+            loss   = criterion(outputs, labels)    
         scaler.scale(loss).backward()
-    
-        if (step + 1) % n_accumulate == 0:
-            scaler.step(optimizer)
-            scaler.update()
+        
+        # Unscales the gradients of optimizer's assigned params in-place
+        scaler.unscale_(optimizer)
+        # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
 
-            # zero the parameter gradients
-            optimizer.zero_grad()
+        # optimizer's gradients are already unscaled, so scaler.step does not unscale them,
+        # although it still skips optimizer.step() if the gradients contain infs or NaNs.
+        scaler.step(optimizer)
 
-            if scheduler is not None:
-                scheduler.step()
+        # Updates the scale for next iteration.
+        scaler.update()
+
+        if scheduler is not None:
+            scheduler.step()
                 
         # measure accuracy and record loss
+        predicted = torch.argmax(outputs.data, dim=1)
+        f1_scores.update(f1_score(predicted.cpu().numpy(), labels.cpu().numpy(), average='weighted'), batch_size)
+        
         prec1, prec5 = accuracy(outputs.data, labels, topk=(1, 5))
         train_top1.update(prec1.item(), batch_size)
         train_top5.update(prec5.item(), batch_size)
             
-        running_loss += (loss.item() * batch_size)
-        dataset_size += batch_size
+        train_loss.update(loss.item(), batch_size)
+        #running_loss += (loss.item() * batch_size)
+        #dataset_size += batch_size
         
-        epoch_loss = running_loss / dataset_size
+        #epoch_loss = running_loss / dataset_size
         
         mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
         current_lr = optimizer.param_groups[0]['lr']
         
-        pbar.set_postfix(epoch=f'{epoch}',train_loss=f'{epoch_loss:0.4f}',
-                        lr=f'{current_lr:0.5f}', top1=f'{train_top1.avg:0.2f}',
+        pbar.set_postfix(epoch=f'{epoch}',
+                        train_loss=f'{train_loss.avg:0.4f}',
+                        lr=f'{current_lr:0.5f}', 
+                        top1=f'{train_top1.avg:0.2f}',
+                        f1_score=f'{f1_scores.avg:0.2f}',
                         gpu_mem=f'{mem:0.2f} GB')
         
-        if cfg.train_config.debug and step < 30:
-            _imgs  = images.cpu().detach()
+        #if cfg.train_config.debug and step < 30:
+            # _imgs  = images.cpu().detach()
             
-            _outputs = (nn.Sigmoid()(outputs)>0.5).double()
-            _outputs = _outputs.cpu().detach()
+            # _outputs = (nn.Sigmoid()(outputs)>0.5).double()
+            # _outputs = _outputs.cpu().detach()
             
-            _labels = labels.cpu().detach()
+            # _labels = labels.cpu().detach()
             #_y_pred = torch.mean(torch.stack(_y_pred, dim=0), dim=0).cpu().detach()
             
             #plot_batch(imgs=_imgs, pred_msks=_y_pred, gt_msks=_masks, size=5, step = step, epoch = epoch, mode = 'train')
             #save_batch(_imgs, _y_pred, size = 5, step = step, epoch = epoch, mode = 'train')
-    return epoch_loss, train_top1.avg
+    return train_loss.avg, train_top1.avg
     
 @torch.no_grad()
 def valid_one_epoch(cfg, model, dataloader, criterion, device, epoch, optimizer):
     model.eval()
     
-    dataset_size = 0
-    running_loss = 0.0
     val_top1 = AverageMeter()
     val_top5 = AverageMeter()
-    
-    countItr = 0
-    correct = 0
-    total = 0
-    f1_score_epoch = 0
-    _labels = [0, 1, 2, 3, 4, 5, 6]
+    val_loss = AverageMeter()
+    f1_scores = AverageMeter()
     conf_matrix = np.zeros((7, 7))
     
+    _total_itr = 0
+    _acc = 0
+    _labels = [0, 1, 2, 3, 4, 5, 6]
+    
     pbar = tqdm(enumerate(dataloader), total=len(dataloader), desc='Valid ')
+    
     for step, (data) in pbar:         
         images = data['image'].to(device, dtype=torch.float)
         labels  = data['label'].to(device)
@@ -149,43 +162,32 @@ def valid_one_epoch(cfg, model, dataloader, criterion, device, epoch, optimizer)
         loss    = criterion(outputs, labels)
         
         ### Loss
-        running_loss += (loss.item() * batch_size)
-        dataset_size += batch_size
-        epoch_loss = running_loss / dataset_size
+        val_loss.update(loss.item(), batch_size)
         
         ### Accuracy
+        predicted = torch.argmax(outputs.data, dim = 1)
         _prec1, _prec5 = accuracy(outputs.data, labels, topk=(1, 5))
         val_top1.update(_prec1.item(), batch_size)
         val_top5.update(_prec5.item(), batch_size)
+        f1_scores.update(f1_score(predicted.cpu().numpy(), labels.cpu().numpy(), average = 'weighted'), batch_size)
+        _acc += (predicted == labels).sum().item() 
+        _total_itr += batch_size
+        _acc_step = _acc / _total_itr
         
-        predicted = torch.argmax(outputs.data, dim = 1)
-        total += len(labels)
-        correct += (predicted == labels).sum().item()
-
-        # Calculate F1-score
-        f1_score_epoch += f1_score(predicted.cpu().numpy(), labels.cpu().numpy(), average = 'weighted')
-        countItr += 1
-
-        # Calculate the confusion matrix
         conf_matrix += confusion_matrix(y_true = labels.cpu().numpy(), y_pred = predicted.cpu().numpy(), labels = _labels)
         
         mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
+        
         current_lr = optimizer.param_groups[0]['lr']
-        pbar.set_postfix(valid_loss=f'{epoch_loss:0.4f}',
+        pbar.set_postfix(valid_loss=f'{val_loss.avg:0.4f}',
+                        f1_scores=f'{f1_scores.avg:0.2f}',
+                        acc=f'{_acc_step:0.2f}',
                         lr=f'{current_lr:0.5f}',
                         gpu_memory=f'{mem:0.2f} GB')
         
-        if cfg.train_config.debug and step < 0:
-            _imgs  = images.cpu().detach()
-            _y_pred = outputs.cpu().detach()
-            
-            _masks = labels.cpu().detach()
-            
-            #plot_batch(imgs=_imgs, pred_msks=_y_pred, gt_msks=_masks, size=5, step = step, epoch = epoch, mode = 'valid')
-            #save_batch(_imgs, _y_pred, size = 5, step = step, epoch = epoch, mode = 'valid')
-    f1_score_epoch = f1_score_epoch / countItr 
-    
-    return epoch_loss, f1_score_epoch, val_top1.avg
+        #if cfg.train_config.debug and step < 0:
+            # Calculate the confusion matrix
+    return val_loss.avg, f1_scores.avg, val_top1.avg, _acc_step, conf_matrix
 
 def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs, train_loader, valid_loader, run_log_wandb):
     
@@ -198,6 +200,7 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
     start = time.time()
     best_f1_scores      = -np.inf
     best_epoch     = -1
+    best_acc       = -1
     
     # start new run
     mlflow.set_tracking_uri('file://' + hydra.utils.get_original_cwd() + '/mlruns')
@@ -210,7 +213,7 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
                                             dataloader=train_loader, 
                                             device=device, epoch=epoch)
             
-            val_loss, f1_scores, val_top1 = valid_one_epoch(cfg, model, valid_loader, criterion,
+            val_loss, f1_scores, val_top1, val_acc, conf_mat = valid_one_epoch(cfg, model, valid_loader, criterion,
                                                     device=device, 
                                                     epoch=epoch, optimizer=optimizer)
 
@@ -220,6 +223,7 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
                     "Valid Loss": val_loss,
                     "Valid F1 score": f1_scores,
                     "Valid Top1": val_top1,
+                    "Valid ACC": val_acc,
                     "LR":scheduler.get_last_lr()[0]})
             
             #Mlflow log
@@ -229,14 +233,17 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
             mlflow.log_metric("Val_loss", val_loss, step=epoch)
             mlflow.log_metric("Val_F1_score", f1_scores, step=epoch)
             mlflow.log_metric("Val_Top1", val_top1, step=epoch)
+            mlflow.log_metric("Val_ACC", val_acc, step=epoch)
             
             # deep copy the model
             if f1_scores >= best_f1_scores:
                 print(f"{c_}Valid Score Improved ({best_f1_scores:0.4f} ---> {f1_scores:0.4f})")
                 best_f1_scores    = f1_scores
-                best_epoch   = epoch
+                best_epoch        = epoch
+                best_acc          = val_acc
                 run_log_wandb.summary["Best F1"]    = best_f1_scores
                 run_log_wandb.summary["Best Epoch"]   = best_epoch
+                run_log_wandb.summary["Best Acc"]   = best_acc
                 #best_model_wts = copy.deepcopy(model.state_dict())
 
                 dirPath = "./run/{}".format(cfg.train_config.comment)
@@ -246,6 +253,11 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
                 # Save a model file from the current directory
                 wandb.save(PATH)
                 print(f"Model Saved{sr_}")
+                
+                label_classes = ['Green', 'Green Left', 'Red_Left', 'Red', 'Yellow', 'Off', 'Other']
+                conf_plt = plot_confusion_matrix(conf_mat, label_classes)
+                conf_plt.savefig(os.path.join(dirPath,'confusion_matrix_keti_best.png'))
+                conf_plt.close()
 
             #last_model_wts = copy.deepcopy(model.state_dict())
             fold = 0
@@ -260,7 +272,7 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
         time_elapsed = end - start
         print('Training complete in {:.0f}h {:.0f}m {:.0f}s'.format(
             time_elapsed // 3600, (time_elapsed % 3600) // 60, (time_elapsed % 3600) % 60))
-        print("Best Score: {:.4f}".format(best_f1_scores))
+        print("Best F1-Score: {:.4f}".format(best_f1_scores))
     return model
 
 @hydra.main(config_path="conf", config_name="config")
