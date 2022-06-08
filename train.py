@@ -68,7 +68,7 @@ def train_one_epoch(cfg, model, optimizer, scheduler, criterion, dataloader, dev
     train_top5 = AverageMeter()
     f1_scores = AverageMeter()
     train_loss = AverageMeter()
-            
+
     pbar = tqdm(enumerate(dataloader), total=len(dataloader), desc='Train:')
     
     for step, (data) in pbar:         
