@@ -142,7 +142,7 @@ def get_dataset(cfg):
         A.Blur(p=0.1),
         A.CLAHE(p=0.1),
         A.RandomBrightnessContrast(p=0.2),
-        #albumentations.RGBShift(r_shift_limit=15, g_shift_limit=15, b_shift_limit=15, p=0.2),
+        A.RGBShift(r_shift_limit=15, g_shift_limit=15, b_shift_limit=15, p=0.2),
         Ap.transforms.ToTensorV2()])
 
     albumentations_valid = A.Compose([
