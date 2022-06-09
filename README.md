@@ -15,11 +15,17 @@
 >> - TSM model [Site](https://tinyml.mit.edu/projects/tsm/)
 >>> - TSN and TSM source code from [SOURCE](https://github.com/mit-han-lab/temporal-shift-module).
 # Training method
-- training:   
+- training Temporal Traffic Light Model:   
 <pre>
 <code>
 python trainTL_TEMPORAL.py --train_path {path of train dataset} --valid_path {path of valid dataset} --model_type resnetLSTM
 --epochs 50 --batch_size 32 --num_frames 10
+</code>
+
+- training Single Frame Traffic Light Model:   
+<pre>
+<code>
+python train.py train_config.model_type=single_frame model.name=resnet18_128x64 train_config.train_bs=256
 </code>
 </pre>
 
