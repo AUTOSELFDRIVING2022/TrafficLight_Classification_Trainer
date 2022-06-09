@@ -15,10 +15,10 @@ def get_model(cfg):
 def build_model_single(cfg):
     if cfg.model.name == 'conv_64x32':
         model = TrafficLightNet_64x32_noSTN(cfg.dataset.num_classes) 
-    elif cfg.model.single_frame.name == 'conv_64x32_coordConv':
+    elif cfg.model.name == 'conv_64x32_coordConv':
         model = TrafficLightNet_64x32_coordConv(cfg.dataset.num_classes)
-    elif cfg.model.single_frame.name == 'resnet18_64x64':
-        model = ResNet18(cfg.dataset.num_classes)
+    elif cfg.model.name == 'resnet18_128x64':
+        model = ResNet18(BasicBlock, [2, 2, 2, 2], cfg.dataset.num_classes)
     else: 
         raise NameError('Choose proper model name!!!')
     

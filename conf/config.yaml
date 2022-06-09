@@ -11,7 +11,7 @@ train_config:
   comment:    ${model.name}_ep_${train_config.epochs}_op_${optimizer.name}_lr_${optimizer.lr}_size_${train_config.img_size[0]}_loss_${losses.name}
   train_bs:   256
   valid_bs:   256
-  img_size:   [32, 64]
+  img_size:   [64, 128]
   epochs:     100
   device:     "cuda"
 

@@ -346,6 +346,8 @@ class TrafficLightNet_64x32_noSTN(nn.Module):
 
         # self.conv4 = nn.Conv2d(250, 300, 1)
         # self.conv4_bn = nn.BatchNorm2d(300)
+        
+        #self.fc1 = nn.Linear(250 * 3 * 7, 350)
         self.fc1 = nn.Linear(250 * 3 * 7, 350)
         self.fc1_bn = nn.BatchNorm1d(350)
         self.fc2 = nn.Linear(350, nclasses)
