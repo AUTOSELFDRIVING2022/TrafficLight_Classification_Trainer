@@ -1,4 +1,12 @@
 # Current reposotiry::: TEST VERSION
+- includes:
+>> Hydra 
+>> MlFlor
+>> Apex training
+>> wandb 
+>> various scheduler
+>> various optimizer
+>> various loss functions.
 # TrafficLight_Recognization_Temporal
 - Traffic Light Recognization with Single frame data and Temporal frame data.
 

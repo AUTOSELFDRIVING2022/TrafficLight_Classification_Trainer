@@ -1,6 +1,8 @@
 name: single
-train_path: '/dataset2/Traffic_Light_Dataset_KETI4/train/'
-valid_path: '/dataset2/Traffic_Light_Dataset_KETI4/test/'
+# train_path: '/dataset2/Traffic_Light_Dataset_KETI4/train/'
+# valid_path: '/dataset2/Traffic_Light_Dataset_KETI4/test/'
+train_path: '/dataset2/Traffic_Light_Dataset_AIHUB/train/'
+valid_path: '/dataset2/Traffic_Light_Dataset_AIHUB/test/'
 num_classes: 7
 in_channels: 3
 num_workers:  4
