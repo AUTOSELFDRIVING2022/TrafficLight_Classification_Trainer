@@ -38,6 +38,7 @@ from source.optimizer import get_optimizer, get_scheduler
 from source.dataset.custom_dataset import get_dataset
 from source.utils.utils import AverageMeter, accuracy
 from source.utils.plotcm import plot_confusion_matrix
+from source.utils.image_utils import save_img
 
 # For colored terminal text
 from colorama import Fore, Back, Style
@@ -108,10 +109,6 @@ def train_one_epoch(cfg, model, optimizer, scheduler, criterion, dataloader, dev
         train_top5.update(prec5.item(), batch_size)
             
         train_loss.update(loss.item(), batch_size)
-        #running_loss += (loss.item() * batch_size)
-        #dataset_size += batch_size
-        
-        #epoch_loss = running_loss / dataset_size
         
         mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
         current_lr = optimizer.param_groups[0]['lr']
@@ -123,21 +120,24 @@ def train_one_epoch(cfg, model, optimizer, scheduler, criterion, dataloader, dev
                         f1_score=f'{f1_scores.avg:0.2f}',
                         gpu_mem=f'{mem:0.2f} GB')
         
-        #if cfg.train_config.debug and step < 30:
-            # _imgs  = images.cpu().detach()
+        if cfg.train_config.debug and step < 10:
+            _class_names_id = {0:'Green', 1:'Green_Left', 2:'Red_Left', 3:'red', 4:'yellow', 5:'off', 6:'other'}
+            dirPath = "./run/{}".format(cfg.train_config.comment)
             
-            # _outputs = (nn.Sigmoid()(outputs)>0.5).double()
-            # _outputs = _outputs.cpu().detach()
+            _imgs  = images.cpu().detach().numpy()
+            _predicted = torch.argmax(outputs.data, dim = 1)
+            _predicted = _predicted.detach().cpu().numpy()
+            _labels_cpu = labels.detach().cpu().numpy()
             
-            # _labels = labels.cpu().detach()
-            #_y_pred = torch.mean(torch.stack(_y_pred, dim=0), dim=0).cpu().detach()
-            
-            #plot_batch(imgs=_imgs, pred_msks=_y_pred, gt_msks=_masks, size=5, step = step, epoch = epoch, mode = 'train')
-            #save_batch(_imgs, _y_pred, size = 5, step = step, epoch = epoch, mode = 'train')
+            for _idx, _img in enumerate(_imgs):
+                temp0 = _img*255
+                class_name = _class_names_id[_labels_cpu[_idx]]
+                temp0 = temp0.transpose(1,2,0)
+                save_img(os.path.join(dirPath, 'train', 'result_img', str(epoch) + '/steps_'+ str(step) + '_' + str(class_name) + '.jpg'),temp0.astype(np.uint8))
     return train_loss.avg, train_top1.avg
     
 @torch.no_grad()
-def valid_one_epoch(cfg, model, dataloader, criterion, device, epoch, optimizer):
+def valid_one_epoch(cfg, model, dataloader, criterion, device, epoch):
     model.eval()
     
     val_top1 = AverageMeter()
@@ -177,20 +177,29 @@ def valid_one_epoch(cfg, model, dataloader, criterion, device, epoch, optimizer)
         conf_matrix += confusion_matrix(y_true = labels.cpu().numpy(), y_pred = predicted.cpu().numpy(), labels = _labels)
         
         mem = torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0
-        
-        current_lr = optimizer.param_groups[0]['lr']
+
         pbar.set_postfix(valid_loss=f'{val_loss.avg:0.4f}',
                         f1_scores=f'{f1_scores.avg:0.2f}',
                         acc=f'{_acc_step:0.2f}',
-                        lr=f'{current_lr:0.5f}',
                         gpu_memory=f'{mem:0.2f} GB')
         
-        #if cfg.train_config.debug and step < 0:
-            # Calculate the confusion matrix
+        if cfg.train_config.debug and step < 10:
+            _class_names_id = {0:'Green', 1:'Green_Left', 2:'Red_Left', 3:'red', 4:'yellow', 5:'off', 6:'other'}
+            dirPath = "./run/{}".format(cfg.train_config.comment)
+            
+            _imgs  = images.cpu().detach().numpy()
+            _predicted = torch.argmax(outputs.data, dim = 1)
+            _predicted = _predicted.detach().cpu().numpy()
+            _labels_cpu = labels.detach().cpu().numpy()
+            
+            for _idx, _img in enumerate(_imgs):
+                temp0 = _img*255
+                class_name = _class_names_id[_labels_cpu[_idx]]
+                temp0 = temp0.transpose(1,2,0)
+                save_img(os.path.join(dirPath, 'valid', 'result_img', str(epoch) + '/steps_'+ str(step) + '_' + str(class_name) + '.jpg'),temp0.astype(np.uint8))
     return val_loss.avg, f1_scores.avg, val_top1.avg, _acc_step, conf_matrix
 
 def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs, train_loader, valid_loader, run_log_wandb):
-    
     # To automatically log gradients
     wandb.watch(model, log_freq=100)
     
@@ -215,7 +224,7 @@ def run_training(cfg, model, optimizer, scheduler, criterion, device, num_epochs
             
             val_loss, f1_scores, val_top1, val_acc, conf_mat = valid_one_epoch(cfg, model, valid_loader, criterion,
                                                     device=device, 
-                                                    epoch=epoch, optimizer=optimizer)
+                                                    epoch=epoch)
 
             # Log the metrics
             wandb.log({"Train Loss": train_loss, 
@@ -292,13 +301,13 @@ def train(cfg : DictConfig) -> None:
         os.makedirs(dirPath)
     
     model = get_model(cfg)
-    train_loader, valid_loader  = get_dataset(cfg) 
+    train_loader, valid_loader  = get_dataset(cfg)
     optimizer = get_optimizer(cfg, model)
     scheduler = get_scheduler(cfg, optimizer)
     criterion = get_criterion(cfg)
     print(cfg.train_config.comment)
     
-    run_log_wandb = wandb.init(project='Traffic-Light-Recognization', 
+    run_log_wandb = wandb.init(project='Traffic-Light-Recognization',
                     config={k:v for k, v in dict(cfg).items() if '__' not in k},
                     anonymous=anonymous,
                     name=f"dim-{cfg.train_config.img_size[0]}x{cfg.train_config.img_size[1]}|model-{cfg.model.name}",
