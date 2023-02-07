@@ -223,4 +223,5 @@ if __name__ == "__main__":
     model = ResNet18(BasicBlock, [2, 2, 2, 2], num_classes = 7)
     x = torch.randn(20, 3, 128, 128)
     y = model(x)
+    print(model)
     print('\n output shape:', y.shape)

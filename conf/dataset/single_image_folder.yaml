@@ -1,8 +1,9 @@
-name: single
+name: single_image_folder
 # train_path: '/dataset2/Traffic_Light_Dataset_KETI4/train/'
 # valid_path: '/dataset2/Traffic_Light_Dataset_KETI4/test/'
 train_path: '/dataset/Traffic_Light_Dataset_AIHUB_230116/train/'
 valid_path: '/dataset/Traffic_Light_Dataset_AIHUB_230116/test/'
 num_classes: 12
 in_channels: 3
-num_workers:  8
+num_workers:  4
+use_sampler: False

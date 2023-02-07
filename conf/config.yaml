@@ -12,9 +12,12 @@ train_config:
   train_bs:   256
   valid_bs:   256
   img_size:   [64, 128]
-  epochs:     100
+  epochs:     50
   device:     "cuda"
 
 
 losses:
   name:         'CE'
+
+onnx_name: '/workspace/03_TRAFFIC_LIGHT_DETECTION/TrafficLight_Recognization_Temporal/bin/best_epoch_230201_cls12.onnx'
+best_path: '/workspace/03_TRAFFIC_LIGHT_DETECTION/TrafficLight_Recognization_Temporal/bin/best_epoch_230201_cls12.pt'

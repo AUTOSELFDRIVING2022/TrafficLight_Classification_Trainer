@@ -5,6 +5,7 @@ from .resnet18LSTM import ResNetLSTM, BasicBlock
 from .resnet18 import ResNet18
 from .TSM_model import TSN
 import torch
+from torchvision.models import resnet34, resnet50
 
 def get_model(cfg):
     if cfg.train_config.model_type == 'single_frame':
@@ -19,6 +20,10 @@ def build_model_single(cfg):
         model = TrafficLightNet_64x32_coordConv(cfg.dataset.num_classes)
     elif cfg.model.name == 'resnet18_128x64':
         model = ResNet18(BasicBlock, [2, 2, 2, 2], cfg.dataset.num_classes)
+    elif cfg.model.name == 'resnet34':
+        model = resnet34(pretrained=False, num_classes=cfg.dataset.num_classes)
+    elif cfg.model.name == 'resnet50':
+        model = resnet50(pretrained=False, num_classes=cfg.dataset.num_classes)
     else: 
         raise NameError('Choose proper model name!!!')
     

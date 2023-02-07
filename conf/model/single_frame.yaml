@@ -1,1 +1,1 @@
-name: 'resnet18_128x64' #resnet18_128x64, conv_64x32, conv_64x32_coordConv
+name: resnet34 #'resnet34' #resnet18_128x64, conv_64x32, conv_64x32_coordConv
